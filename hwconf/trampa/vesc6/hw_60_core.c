@@ -105,11 +105,7 @@ void hw_init_gpio(void) {
 			PAL_STM32_OSPEED_HIGHEST |
 			PAL_STM32_PUDR_FLOATING);
 
-	// Hall sensors
-	palSetPadMode(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1, PAL_MODE_INPUT_PULLUP);
-	palSetPadMode(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2, PAL_MODE_INPUT_PULLUP);
-	palSetPadMode(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3, PAL_MODE_INPUT_PULLUP);
-
+	
 	// Phase filters
 #ifdef PHASE_FILTER_GPIO
 	palSetPadMode(PHASE_FILTER_GPIO, PHASE_FILTER_PIN,
@@ -143,6 +139,16 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOC, 4, PAL_MODE_INPUT_ANALOG);
 #if !defined(HW60_IS_MK3) && !defined(HW60_IS_MK4) && !defined(HW60_IS_MK5) && !defined(HW60_IS_MK6)
 	palSetPadMode(GPIOC, 5, PAL_MODE_INPUT_ANALOG);
+#endif
+
+	// Hall sensors
+	palSetPadMode(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1, PAL_MODE_INPUT_PULLUP);
+	palSetPadMode(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2, PAL_MODE_INPUT_PULLUP);
+	palSetPadMode(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3, PAL_MODE_INPUT_PULLUP);
+#if defined(HW60_IS_CIRCULAR)
+	palSetPadMode(GPIOC, 5, PAL_MODE_INPUT_PULLUP);
+	palSetPadMode(GPIOA, 5, PAL_MODE_INPUT_PULLUP);
+	palSetPadMode(GPIOA, 6, PAL_MODE_INPUT_PULLUP);
 #endif
 
 	drv8301_init();

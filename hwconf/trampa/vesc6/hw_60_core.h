@@ -34,6 +34,8 @@
 #endif
 #elif defined(HW60_IS_MK1)
 #define HW_NAME					"60"
+#elif defined(HW60_IS_CIRCULAR)
+#define HW_NAME					"60_CIRCULAR"
 #else
 #error "Must include hardware type"
 #endif
@@ -394,9 +396,15 @@
 #define ADC_V_ZERO				(ADC_Value[ADC_IND_VIN_SENS] / 2)
 
 // Macros
+#if !defined(HW60_IS_CIRCULAR)
 #define READ_HALL1()			palReadPad(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1)
 #define READ_HALL2()			palReadPad(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2)
 #define READ_HALL3()			palReadPad(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3)
+#else //change hall pins for circular version
+#define READ_HALL1()			palReadPad(GPIOC, 5)
+#define READ_HALL2()			palReadPad(GPIOA, 5)
+#define READ_HALL3()			palReadPad(GPIOA, 6)
+#endif
 
 // Default setting overrides
 #ifndef MCCONF_DEFAULT_MOTOR_TYPE

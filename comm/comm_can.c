@@ -1155,6 +1155,30 @@ void comm_can_send_status1(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
 	buffer_append_int32(buffer, (int32_t)mc_interface_get_rpm(), &send_index);
+	buffer_append_int32(buffer, (int32_t)(mc_interface_get_pid_pos_now() * 1000.0), &send_index);
+	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS << 8),
+			buffer, send_index, replace, 0);
+}
+
+void comm_can_send_status2(uint8_t id, bool replace) {
+	int32_t send_index = 0;
+	uint8_t buffer[8];
+	float_t test1 = mc_interface_temp_fet_filtered();
+	float_t test2 = mc_interface_temp_motor_filtered();
+	buffer_append_int16(buffer, (int16_t)(mc_interface_get_amp_hours(false) * 1e4), &send_index);
+	buffer_append_int16(buffer, (int16_t)(mc_interface_get_tot_current_directional_filtered() * 1e1), &send_index);
+	buffer_append_int16(buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1e3), &send_index);
+	buffer_append_int8(buffer, (int8_t)(test1), &send_index);
+	buffer_append_int8(buffer, (int8_t)(test2), &send_index);
+
+	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_2 << 8),
+			buffer, send_index, replace, 0);
+}
+
+/*void comm_can_send_status1(uint8_t id, bool replace) {
+	int32_t send_index = 0;
+	uint8_t buffer[8];
+	buffer_append_int32(buffer, (int32_t)mc_interface_get_rpm(), &send_index);
 	buffer_append_int16(buffer, (int16_t)(mc_interface_get_tot_current_filtered() * 1e1), &send_index);
 	buffer_append_int16(buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1e3), &send_index);
 	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS << 8),
@@ -1168,7 +1192,7 @@ void comm_can_send_status2(uint8_t id, bool replace) {
 	buffer_append_int32(buffer, (int32_t)(mc_interface_get_amp_hours_charged(false) * 1e4), &send_index);
 	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_2 << 8),
 			buffer, send_index, replace, 0);
-}
+}*/
 
 void comm_can_send_status3(uint8_t id, bool replace) {
 	int32_t send_index = 0;
