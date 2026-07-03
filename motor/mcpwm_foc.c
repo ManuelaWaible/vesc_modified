@@ -756,9 +756,30 @@ void mcpwm_foc_set_pid_speed(float rpm) {
  * The desired position of the motor in degrees.
 
  */
-void mcpwm_foc_set_pid_pos(float pos) {
+void mcpwm_foc_set_pid_pos(float pos, float speed, float ff_current) {
+	// get motor instance ID
+	int motor_idx = mc_interface_get_motor_thread();
+#ifdef HW_HAS_DUAL_MOTORS
+    if (motor_idx == 2) {
+        m_motor_2.m_control_mode = CONTROL_MODE_POS;
+        m_motor_2.m_pos_pid_set = pos;
+        m_motor_2.m_speed_pid_set_rpm = speed;
+        m_motor_2.m_pos_ff_current = ff_current; // Explicit write to Motor 2
+
+        if (m_motor_2.m_state != MC_STATE_RUNNING) {
+            m_motor_2.m_motor_released = false;
+            m_motor_2.m_state = MC_STATE_RUNNING;
+        }
+        return;
+    }
+#endif
+
+    // Default to Motor 1
+    m_motor_1.m_pos_ff_current = ff_current; // Explicit write to Motor 1
+
 	get_motor_now()->m_control_mode = CONTROL_MODE_POS;
 	get_motor_now()->m_pos_pid_set = pos;
+	get_motor_now()->m_speed_pid_set_rpm = speed;
 
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;

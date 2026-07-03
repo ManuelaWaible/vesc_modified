@@ -77,6 +77,8 @@ typedef struct {
 	float m_watt_seconds;
 	float m_watt_seconds_charged;
 	float m_position_set;
+	float m_speed_pid_set_rpm;
+	float m_pos_ff_current;
 	float m_temp_fet;
 	float m_temp_motor;
 	float m_gate_driver_voltage;
@@ -609,6 +611,10 @@ void mc_interface_set_pid_speed(float rpm) {
 }
 
 void mc_interface_set_pid_pos(float pos) {
+	mc_interface_set_pid_pos_ff(pos, 0.0, 0.0);
+}
+
+void mc_interface_set_pid_pos_ff(float pos, float speed, float ff_current) {
 	SHUTDOWN_RESET();
 
 	if (mc_interface_try_input()) {
@@ -618,6 +624,9 @@ void mc_interface_set_pid_pos(float pos) {
 	volatile mc_configuration *conf = &motor_now()->m_conf;
 
 	motor_now()->m_position_set = pos;
+	motor_now()->m_speed_pid_set_rpm = speed;
+	motor_now()->m_pos_ff_current = ff_current;
+	
 
 	pos += motor_now()->m_conf.p_pid_offset;
 	pos *= DIR_MULT;
@@ -637,7 +646,7 @@ void mc_interface_set_pid_pos(float pos) {
 		break;
 
 	case MOTOR_TYPE_FOC:
-		mcpwm_foc_set_pid_pos(pos);
+		mcpwm_foc_set_pid_pos(pos, speed, ff_current);
 		break;
 
 	default:

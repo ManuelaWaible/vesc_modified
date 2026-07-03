@@ -389,47 +389,76 @@ void foc_run_pid_control_pos(bool index_found, float dt, motor_all_state_t *moto
 
 	p_term = error * kp;
 	motor->m_pos_i_term += error * (ki * dt);
+	// limit i_term to maximum 30% of total output
+	utils_truncate_number_abs((float*)&motor->m_pos_i_term, 0.3f);
 
 	// Average DT for the D term when the error does not change. This likely
 	// happens at low speed when the position resolution is low and several
 	// control iterations run without position updates.
 	// TODO: Are there problems with this approach?
-	motor->m_pos_dt_int += dt;
-	if (error == motor->m_pos_prev_error) {
-		d_term = 0.0;
-	} else {
-		d_term = (error - motor->m_pos_prev_error) * (kd / motor->m_pos_dt_int);
-		motor->m_pos_dt_int = 0.0;
-	}
+//	motor->m_pos_dt_int += dt;
+//	if (error == motor->m_pos_prev_error) {
+//		d_term = 0.0;
+//	} else {
+//		d_term = (error - motor->m_pos_prev_error) * (kd / motor->m_pos_dt_int);
+//		motor->m_pos_dt_int = 0.0;
+//	}
+
+	// use velocity setpoint for D term
+	float rpm_actual  = RADPS2RPM_f(motor->m_motor_state.speed_rad_s);
+    float rpm_desired = motor->m_speed_pid_set_rpm;  // velocity feedforward / desired rate
+    float vel_error   = rpm_desired - rpm_actual; // do not multiply with error_sign as rpm_actual is already signed to the encoder direction
+
+    d_term = vel_error * (kd / 6.0f); // convert from rpm to deg/s
 
 	// Filter D
 	UTILS_LP_FAST(motor->m_pos_d_filter, d_term, conf_now->p_pid_kd_filter);
 	d_term = motor->m_pos_d_filter;
 
 	// Process D term
-	motor->m_pos_dt_int_proc += dt;
-	if (angle_now == motor->m_pos_prev_proc) {
-		d_term_proc = 0.0;
-	} else {
-		d_term_proc = -utils_angle_difference(angle_now, motor->m_pos_prev_proc) * error_sign * (kd_proc / motor->m_pos_dt_int_proc);
-		motor->m_pos_dt_int_proc = 0.0;
-	}
+//	motor->m_pos_dt_int_proc += dt;
+//	if (angle_now == motor->m_pos_prev_proc) {
+//		d_term_proc = 0.0;
+//	} else {
+//		d_term_proc = -utils_angle_difference(angle_now, motor->m_pos_prev_proc) * error_sign * (kd_proc / motor->m_pos_dt_int_proc);
+//		motor->m_pos_dt_int_proc = 0.0;
+//	}
+
+	// use velocity for D term processing
+	// do not multiply with error_sign as rpm_actual is already signed to the encoder direction
+	 d_term_proc = -rpm_actual * (kd_proc / 6.0f);
 
 	// Filter D process
 	UTILS_LP_FAST(motor->m_pos_d_filter_proc, d_term_proc, conf_now->p_pid_kd_filter);
 	d_term_proc = motor->m_pos_d_filter_proc;
 
-	// I-term wind-up protection
-	float p_tmp = p_term;
-	utils_truncate_number_abs(&p_tmp, 1.0);
-	utils_truncate_number_abs((float*)&motor->m_pos_i_term, 1.0 - fabsf(p_tmp));
-
 	// Store previous error
 	motor->m_pos_prev_error = error;
 	motor->m_pos_prev_proc = angle_now;
 
+	// add feedforward current
+	//float kt = conf_now->p_pid_ff_current_kt;
+	float ff_current_amps = motor->m_pos_ff_current;
+    float ff_normalized = 0.0f;
+
+    // Dynamically read the 20.0A max limit from your VESC configuration
+    float max_current_capacity = conf_now->l_current_max * conf_now->l_current_max_scale;
+
+    if (max_current_capacity > 0.001f) {
+        ff_normalized = ff_current_amps / max_current_capacity;
+    }
+
+	// I-term wind-up protection
+	float effort_tmp = p_term + ff_normalized; // add feedforward to headroom calculation for i_term
+	utils_truncate_number_abs(&effort_tmp, 1.0);
+	utils_truncate_number_abs((float*)&motor->m_pos_i_term, 1.0 - fabsf(effort_tmp));
+
 	// Calculate output
-	float output = p_term + motor->m_pos_i_term + d_term + d_term_proc;
+	float output = p_term + motor->m_pos_i_term + d_term + d_term_proc;	
+
+    // Add feedforward directly to the raw PID output
+    output += ff_normalized;
+
 	utils_truncate_number(&output, -1.0, 1.0);
 
 	if (conf_now->m_sensor_port_mode != SENSOR_PORT_MODE_HALL) {

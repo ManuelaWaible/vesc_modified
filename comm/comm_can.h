@@ -42,6 +42,7 @@ void comm_can_set_current_off_delay(uint8_t controller_id, float current, float 
 void comm_can_set_current_brake(uint8_t controller_id, float current);
 void comm_can_set_rpm(uint8_t controller_id, float rpm);
 void comm_can_set_pos(uint8_t controller_id, float pos);
+void comm_can_set_pos_ff(uint8_t controller_id, float pos, float speed, float ff_current);
 void comm_can_set_current_rel(uint8_t controller_id, float current_rel);
 void comm_can_set_current_rel_off_delay(uint8_t controller_id, float current_rel, float off_delay);
 void comm_can_set_current_brake_rel(uint8_t controller_id, float current_rel);
@@ -85,6 +86,8 @@ psw_status *comm_can_get_psw_status_index(int index);
 psw_status *comm_can_get_psw_status_id(int id);
 void comm_can_psw_switch(int id, bool is_on, bool plot);
 void comm_can_update_pid_pos_offset(int id, float angle_now, bool store);
+void comm_can_conf_pos_pid(uint8_t controller_id,
+		bool store, float kp, float ki, float kd);
 
 CANRxFrame *comm_can_get_rx_frame(int interface);
 

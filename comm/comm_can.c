@@ -495,9 +495,19 @@ void comm_can_set_rpm(uint8_t controller_id, float rpm) {
 }
 
 void comm_can_set_pos(uint8_t controller_id, float pos) {
+	comm_can_set_pos_ff(controller_id, pos, 0.0, 0.0);
+}
+
+void comm_can_set_pos_ff(uint8_t controller_id, float pos, float speed, float ff_current) {
 	int32_t send_index = 0;
-	uint8_t buffer[4];
+	uint8_t buffer[12];
+	// First 4 bytes: Position
 	buffer_append_int32(buffer, (int32_t)(pos * 1000000.0), &send_index);
+	// Next 2 bytes: Speed
+	buffer_append_int16(buffer, (int16_t)(speed * 10.0), &send_index);
+	// Last 2 bytes: Feedforward Current (multiplied by 1,000)
+    buffer_append_int16(buffer, (int16_t)(ff_current * 1000.0), &send_index);
+
 	comm_can_transmit_eid_replace(controller_id |
 			((uint32_t)CAN_PACKET_SET_POS << 8), buffer, send_index, true, 0);
 }
@@ -1112,6 +1122,48 @@ void comm_can_update_pid_pos_offset(int id, float angle_now, bool store) {
 			buffer, send_index, true, 0);
 }
 
+/**
+ * Set position PID gains at runtime.
+ *
+ * @param controller_id
+ * The ID of the VESC to set the gains on.
+ *
+ * @param store
+ * If true, the gains will be stored in flash.
+ *
+ * @param kp
+ * Proportional gain.
+ *
+ * @param ki
+ * Integral gain.
+ *
+ * @param kd
+ * Derivative gain.
+ */
+void comm_can_conf_pos_pid(uint8_t controller_id,
+		bool store, float kp, float ki, float kd) {
+	int32_t send_index = 0;
+	uint8_t buffer[4];
+
+	send_index = 0;
+	buffer_append_float32_auto(buffer, kp, &send_index);
+	comm_can_transmit_eid_replace(controller_id |
+			((uint32_t)(store ? CAN_PACKET_CONF_STORE_POS_PID_KP :
+					CAN_PACKET_CONF_POS_PID_KP) << 8), buffer, send_index, true, 0);
+
+	send_index = 0;
+	buffer_append_float32_auto(buffer, ki, &send_index);
+	comm_can_transmit_eid_replace(controller_id |
+			((uint32_t)(store ? CAN_PACKET_CONF_STORE_POS_PID_KI :
+					CAN_PACKET_CONF_POS_PID_KI) << 8), buffer, send_index, true, 0);
+
+	send_index = 0;
+	buffer_append_float32_auto(buffer, kd, &send_index);
+	comm_can_transmit_eid_replace(controller_id |
+			((uint32_t)(store ? CAN_PACKET_CONF_STORE_POS_PID_KD :
+					CAN_PACKET_CONF_POS_PID_KD) << 8), buffer, send_index, true, 0);
+}
+
 /*
  * Get frame from RX buffer. Interface is the CAN-interface to read from. If
  * no frames are available NULL is returned.
@@ -1579,7 +1631,13 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 
 		case CAN_PACKET_SET_POS:
 			ind = 0;
-			mc_interface_set_pid_pos(buffer_get_float32(data8, 1e6, &ind));
+			// Get position from bytes 0-3
+            float received_pos = buffer_get_float32(data8, 1e6, &ind); 
+			// Get velocity from bytes 4-5
+			float received_vel = buffer_get_float16(data8, 10, &ind);
+            // Get feedforward current from bytes 6-7
+            float received_ff  = buffer_get_float16(data8, 1e3, &ind);
+			mc_interface_set_pid_pos_ff(received_pos, received_vel, received_ff);
 			timeout_reset();
 			break;
 
@@ -1826,6 +1884,72 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 				mcconf->foc_sl_erpm = foc_sl_erpm;
 
 				if (cmd == CAN_PACKET_CONF_STORE_FOC_ERPMS) {
+					conf_general_store_mc_configuration(mcconf,
+							mc_interface_get_motor_thread() == 2);
+				}
+
+				mc_interface_set_configuration(mcconf);
+			}
+
+			mempools_free_mcconf(mcconf);
+		} break;
+
+		case CAN_PACKET_CONF_POS_PID_KP:
+		case CAN_PACKET_CONF_STORE_POS_PID_KP: {
+			ind = 0;
+			float kp = buffer_get_float32(data8, 1e6, &ind);
+
+			mc_configuration *mcconf = mempools_alloc_mcconf();
+			*mcconf = *mc_interface_get_configuration();
+
+			if (mcconf->p_pid_kp != kp) {
+				mcconf->p_pid_kp = kp;
+
+				if (cmd == CAN_PACKET_CONF_STORE_POS_PID_KP) {
+					conf_general_store_mc_configuration(mcconf,
+							mc_interface_get_motor_thread() == 2);
+				}
+
+				mc_interface_set_configuration(mcconf);
+			}
+
+			mempools_free_mcconf(mcconf);
+		} break;
+
+		case CAN_PACKET_CONF_POS_PID_KI:
+		case CAN_PACKET_CONF_STORE_POS_PID_KI: {
+			ind = 0;
+			float ki = buffer_get_float32(data8, 1e6, &ind);
+
+			mc_configuration *mcconf = mempools_alloc_mcconf();
+			*mcconf = *mc_interface_get_configuration();
+
+			if (mcconf->p_pid_ki != ki) {
+				mcconf->p_pid_ki = ki;
+
+				if (cmd == CAN_PACKET_CONF_STORE_POS_PID_KI) {
+					conf_general_store_mc_configuration(mcconf,
+							mc_interface_get_motor_thread() == 2);
+				}
+
+				mc_interface_set_configuration(mcconf);
+			}
+
+			mempools_free_mcconf(mcconf);
+		} break;
+
+		case CAN_PACKET_CONF_POS_PID_KD:
+		case CAN_PACKET_CONF_STORE_POS_PID_KD: {
+			ind = 0;
+			float kd = buffer_get_float32(data8, 1e6, &ind);
+
+			mc_configuration *mcconf = mempools_alloc_mcconf();
+			*mcconf = *mc_interface_get_configuration();
+
+			if (mcconf->p_pid_kd != kd) {
+				mcconf->p_pid_kd = kd;
+
+				if (cmd == CAN_PACKET_CONF_STORE_POS_PID_KD) {
 					conf_general_store_mc_configuration(mcconf,
 							mc_interface_get_motor_thread() == 2);
 				}

@@ -176,6 +176,7 @@ typedef struct {
 	float m_pos_dt_int_proc;
 	float m_pos_d_filter;
 	float m_pos_d_filter_proc;
+	float m_pos_ff_current;
 	float m_speed_i_term;
 	float m_speed_prev_error;
 	float m_speed_d_filter;

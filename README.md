@@ -15,6 +15,8 @@ This is the source code for the VESC DC/BLDC/FOC controller. Read more at
 
 ## Supported boards
 
+modified for 60_circular hardware, so compile with "make 60_circular"
+
 All of them!
 
 Check the supported boards by typing `make`
