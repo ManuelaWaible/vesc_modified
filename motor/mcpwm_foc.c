@@ -1239,6 +1239,16 @@ float mcpwm_foc_get_tot_current_directional_filtered(void) {
 }
 
 /**
+ * Get the motor setpoint current.
+ * 
+ * @return
+ * The motor setpoint current.
+ */
+float mcpwm_foc_get_tot_current_setpoint(void) {
+	return get_motor_now()->m_motor_state.iq_target;
+}
+
+/**
  * Get the direct axis motor current.
  *
  * @return

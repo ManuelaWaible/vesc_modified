@@ -73,6 +73,7 @@ float mc_interface_get_tot_current(void);
 float mc_interface_get_tot_current_filtered(void);
 float mc_interface_get_tot_current_directional(void);
 float mc_interface_get_tot_current_directional_filtered(void);
+float mc_interface_get_tot_current_setpoint(void);
 float mc_interface_get_tot_current_in(void);
 float mc_interface_get_tot_current_in_filtered(void);
 float mc_interface_get_input_voltage_filtered(void);

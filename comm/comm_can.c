@@ -504,7 +504,7 @@ void comm_can_set_pos_ff(uint8_t controller_id, float pos, float speed, float ff
 	// First 4 bytes: Position
 	buffer_append_int32(buffer, (int32_t)(pos * 1000000.0), &send_index);
 	// Next 2 bytes: Speed
-	buffer_append_int16(buffer, (int16_t)(speed * 10.0), &send_index);
+	buffer_append_int16(buffer, (int16_t)(speed * 1.0), &send_index);
 	// Last 2 bytes: Feedforward Current (multiplied by 1,000)
     buffer_append_int16(buffer, (int16_t)(ff_current * 1000.0), &send_index);
 
@@ -1217,7 +1217,8 @@ void comm_can_send_status2(uint8_t id, bool replace) {
 	uint8_t buffer[8];
 	float_t test1 = mc_interface_temp_fet_filtered();
 	float_t test2 = mc_interface_temp_motor_filtered();
-	buffer_append_int16(buffer, (int16_t)(mc_interface_get_amp_hours(false) * 1e4), &send_index);
+	//buffer_append_int16(buffer, (int16_t)(mc_interface_get_amp_hours(false) * 1e4), &send_index);
+	buffer_append_int16(buffer, (int16_t)(mc_interface_get_tot_current_setpoint() * 1e1), &send_index);
 	buffer_append_int16(buffer, (int16_t)(mc_interface_get_tot_current_directional_filtered() * 1e1), &send_index);
 	buffer_append_int16(buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1e3), &send_index);
 	buffer_append_int8(buffer, (int8_t)(test1), &send_index);
@@ -1269,9 +1270,11 @@ void comm_can_send_status4(uint8_t id, bool replace) {
 void comm_can_send_status5(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
+
+	uint16_t time_10us = (uint16_t)((chVTGetSystemTimeX() * 100000) / CH_CFG_ST_FREQUENCY); // time in 10µs unit
 	buffer_append_int32(buffer, mc_interface_get_tachometer_value(false), &send_index);
 	buffer_append_int16(buffer, (int16_t)(mc_interface_get_input_voltage_filtered() * 1e1), &send_index);
-	buffer_append_int16(buffer, 0, &send_index); // Reserved for now
+	buffer_append_uint16(buffer, time_10us, &send_index); // timestamp
 	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_5 << 8),
 			buffer, send_index, replace, 0);
 }
@@ -1634,7 +1637,7 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 			// Get position from bytes 0-3
             float received_pos = buffer_get_float32(data8, 1e6, &ind); 
 			// Get velocity from bytes 4-5
-			float received_vel = buffer_get_float16(data8, 10, &ind);
+			float received_vel = buffer_get_float16(data8, 1, &ind);
             // Get feedforward current from bytes 6-7
             float received_ff  = buffer_get_float16(data8, 1e3, &ind);
 			mc_interface_set_pid_pos_ff(received_pos, received_vel, received_ff);

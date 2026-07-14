@@ -64,6 +64,7 @@ float mcpwm_foc_get_abs_motor_voltage(void);
 float mcpwm_foc_get_abs_motor_current_filtered(void);
 float mcpwm_foc_get_tot_current_directional(void);
 float mcpwm_foc_get_tot_current_directional_filtered(void);
+float mcpwm_foc_get_tot_current_setpoint(void);
 float mcpwm_foc_get_id(void);
 float mcpwm_foc_get_iq(void);
 float mcpwm_foc_get_id_filter(void);

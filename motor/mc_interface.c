@@ -1212,6 +1212,21 @@ float mc_interface_get_tot_current_directional_filtered(void) {
 	return DIR_MULT * ret;
 }
 
+float mc_interface_get_tot_current_setpoint(void) {
+	float ret = 0.0;
+
+	switch (motor_now()->m_conf.motor_type) {
+	case MOTOR_TYPE_FOC:
+		ret = mcpwm_foc_get_tot_current_setpoint();
+		break;
+
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 float mc_interface_get_tot_current_in(void) {
 	float ret = 0.0;
 
