@@ -215,7 +215,7 @@ static void write_app_config(void);
  */
 static param_t parameters[] =
 {
-	{"can_baud_rate", 		AP_PARAM_INT8,   0,   0,   8,   CAN_BAUD_500K},
+	{"can_baud_rate", 		AP_PARAM_INT8,   0,   0,   8,   CAN_BAUD_1M},
 	{"can_status_rate_1",	AP_PARAM_INT32,  0,   0, 1000,  50},
 	{"can_status_rate_2",	AP_PARAM_INT32,  0,   0, 1000,  5},
 	{"can_status_msgs_r1",	AP_PARAM_INT16,  0,   0,   255,   0},
