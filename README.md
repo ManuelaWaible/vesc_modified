@@ -1,4 +1,4 @@
-# VESC firmware
+# VESC firmware modified with feedforward current in the position control loop, runtime changeable control gains and default baud rate of 1M
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Travis CI Status](https://travis-ci.com/vedderb/bldc.svg?branch=master)](https://travis-ci.com/vedderb/bldc)
